@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="mb-4">
+        <h2>Olá, André Rufino Papaleo!</h2>
+        <hr>
+    </div>
+    <h4>Seu navegador é: {{ user_agent }}</h4>
+    <br>
+    <h4>O IP do computador remoto é: {{ ip_remoto }}</h4>
+    <br>
+    <h4>O host da aplicação é: {{ host_app }}</h4>
+{% endblock %}

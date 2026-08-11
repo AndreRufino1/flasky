@@ -1,41 +1,30 @@
-from flask import Flask, request, make_response, redirect, abort
+from flask import Flask, render_template, request
+from flask_moment import Moment
+from datetime import datetime, timezone
 
 app = Flask(__name__)
+# Inicializa a extensão Moment
+moment = Moment(app)
 
-# 1. Rota raiz
+# 1. Rota Home (Aula 040)
 @app.route('/')
 def index():
-    return '<h1>Hello World!</h1><h2>Disciplina PTBDSWS</h2>'
+    # Captura tempo exato
+    agora = datetime.now(timezone.utc)
+    # Envia a variável 'agora' para ser exibida no HTML
+    return render_template('index.html', current_time=agora)
 
-# 2. Rota dinâmica
-@app.route('/user/<name>')
-def user(name):
-    return '<h1>Hello, {}!</h1>'.format(name)
+# 2. Rota de Identificação
+@app.route('/identificacao')
+def identificacao():
+    return render_template('identificacao.html')
 
-# 3. Contexto da requisição
+# 3. Rota do Contexto da Requisição
 @app.route('/contextorequisicao')
-def contextorequisicao():
+def contexto():
+    # Captura os dados do visitante
     user_agent = request.headers.get('User-Agent')
-    return '<p>Your browser is {}</p>'.format(user_agent)
-
-# 4. Código de status diferente
-@app.route('/codigostatusdiferente')
-def codigostatusdiferente():
-    return 'Bad request', 400
-
-# 5. Objeto de resposta (Cookie)
-@app.route('/objetoresposta')
-def objetoresposta():
-    response = make_response('<h1>This document carries a cookie!</h1>')
-    response.set_cookie('teste_cookie', '12345')
-    return response
-
-# 6. Redirecionamento
-@app.route('/redirecionamento')
-def redirecionamento():
-    return redirect('https://ptb.ifsp.edu.br')
-
-# 7. Abortar (Erro 404)
-@app.route('/abortar')
-def abortar():
-    abort(404)
+    ip_remoto = request.remote_addr
+    host_app = request.host
+    # Envia os 3 dados capturados para o HTML
+    return render_template('contexto.html', user_agent=user_agent, ip_remoto=ip_remoto, host_app=host_app)
