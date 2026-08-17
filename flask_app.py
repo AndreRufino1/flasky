@@ -6,7 +6,7 @@ from flask_moment import Moment
 from datetime import datetime
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'ghp_OUMt6a2NBB3djgQUa5W3sKppZdKxxz0lTA6E'
+app.config['SECRET_KEY'] = 'chave secreta'
 
 # Inicializando o Flask-Moment
 moment = Moment(app)
