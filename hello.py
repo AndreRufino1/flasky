@@ -24,25 +24,29 @@ class LoginForm(FlaskForm):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     form = HomeForm()
-    
+
+    # Se o usuário clicou em Submit
     if form.validate_on_submit():
         session['nome'] = form.nome.data
         session['sobrenome'] = form.sobrenome.data
         session['instituicao'] = form.instituicao.data
         session['disciplina'] = form.disciplina.data
+
+        # Captura o IP e o Host APENAS após o envio, para que antes fiquem como None
+        session['ip_remoto'] = request.remote_addr
+        session['host_app'] = request.host
+
         return redirect(url_for('index'))
-    
-    ip_remoto = request.remote_addr
-    host_app = request.host
+
     agora = datetime.now(timezone.utc)
-    
-    return render_template('index.html', form=form, 
-                           nome=session.get('nome'), 
-                           sobrenome=session.get('sobrenome'), 
-                           instituicao=session.get('instituicao'), 
+
+    return render_template('index.html', form=form,
+                           nome=session.get('nome'),
+                           sobrenome=session.get('sobrenome'),
+                           instituicao=session.get('instituicao'),
                            disciplina=session.get('disciplina'),
-                           ip_remoto=ip_remoto, 
-                           host_app=host_app,
+                           ip_remoto=session.get('ip_remoto'),
+                           host_app=session.get('host_app'),
                            current_time=agora)
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -52,7 +56,7 @@ def login():
         # Agora ele salva o usuário que foi digitado na caixinha
         session['usuario_logado'] = form.usuario.data
         return redirect(url_for('login'))
-        
+
     agora = datetime.now(timezone.utc)
     # Envia a informação do usuário logado para o HTML
     return render_template('login.html', form=form, usuario=session.get('usuario_logado'), current_time=agora)
