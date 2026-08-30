@@ -1,62 +1,80 @@
-from flask import Flask, render_template, request, session, redirect, url_for
+import os
+from flask import Flask, render_template, session, redirect, url_for
+from flask_bootstrap import Bootstrap
 from flask_moment import Moment
-from datetime import datetime, timezone
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, SelectField, PasswordField
+from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+
+basedir = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'chave_secreta_ifsp_dswa5'
-moment = Moment(app)
+app.config['SECRET_KEY'] = 'hard to guess string'
+app.config['SQLALCHEMY_DATABASE_URI'] =\
+    'sqlite:///' + os.path.join(basedir, 'data.sqlite')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-class HomeForm(FlaskForm):
-    nome = StringField('Informe o seu nome:', validators=[DataRequired()])
-    sobrenome = StringField('Informe o seu sobrenome:', validators=[DataRequired()])
-    instituicao = StringField('Informe a sua Insituição de ensino:', validators=[DataRequired()])
-    disciplina = SelectField('Informe a sua disciplina:', choices=[('DSWA5', 'DSWA5'), ('DWBA4', 'DWBA4'), ('Gestão de projetos', 'Gestão de projetos')])
+bootstrap = Bootstrap(app)
+moment = Moment(app)
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
+
+class Role(db.Model):
+    __tablename__ = 'roles'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True)
+    users = db.relationship('User', backref='role', lazy='dynamic')
+
+    def __repr__(self):
+        return '<Role %r>' % self.name
+
+
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), unique=True, index=True)
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+
+    def __repr__(self):
+        return '<User %r>' % self.username
+
+
+class NameForm(FlaskForm):
+    name = StringField('What is your name?', validators=[DataRequired()])
     submit = SubmitField('Submit')
 
-class LoginForm(FlaskForm):
-    usuario = StringField('Usuário ou e-mail', validators=[DataRequired()])
-    senha = PasswordField('Informe a sua senha', validators=[DataRequired()])
-    submit = SubmitField('Enviar')
+
+@app.shell_context_processor
+def make_shell_context():
+    return dict(db=db, User=User, Role=Role)
+
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template('500.html'), 500
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    form = HomeForm()
-
-    # Se o usuário clicou em Submit
+    form = NameForm()
     if form.validate_on_submit():
-        session['nome'] = form.nome.data
-        session['sobrenome'] = form.sobrenome.data
-        session['instituicao'] = form.instituicao.data
-        session['disciplina'] = form.disciplina.data
-
-        # Captura o IP e o Host APENAS após o envio, para que antes fiquem como None
-        session['ip_remoto'] = request.remote_addr
-        session['host_app'] = request.host
-
+        user = User.query.filter_by(username=form.name.data).first()
+        if user is None:
+            user = User(username=form.name.data)
+            db.session.add(user)
+            db.session.commit()
+            session['known'] = False
+        else:
+            session['known'] = True
+        session['name'] = form.name.data
         return redirect(url_for('index'))
-
-    agora = datetime.now(timezone.utc)
-
-    return render_template('index.html', form=form,
-                           nome=session.get('nome'),
-                           sobrenome=session.get('sobrenome'),
-                           instituicao=session.get('instituicao'),
-                           disciplina=session.get('disciplina'),
-                           ip_remoto=session.get('ip_remoto'),
-                           host_app=session.get('host_app'),
-                           current_time=agora)
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        # Agora ele salva o usuário que foi digitado na caixinha
-        session['usuario_logado'] = form.usuario.data
-        return redirect(url_for('login'))
-
-    agora = datetime.now(timezone.utc)
-    # Envia a informação do usuário logado para o HTML
-    return render_template('login.html', form=form, usuario=session.get('usuario_logado'), current_time=agora)
+    return render_template('index.html', form=form, name=session.get('name'),
+                           known=session.get('known', False))

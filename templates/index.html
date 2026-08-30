@@ -1,49 +1,16 @@
 {% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
 
-{% block content %}
-    
-    <div class="mb-4">
-        {% if nome %}
-            <h2>Olá, {{ nome }} {{ sobrenome }}!</h2>
-        {% else %}
-            <h2>Olá, Estranho!</h2>
-        {% endif %}
+{% block title %}Flasky{% endblock %}
 
-        <h4 class="mt-3">A sua Insituição de ensino é {{ instituicao }}</h4>
-        <h4>Está cursando a disciplina de {{ disciplina }}</h4>
-        <br>
-        <p>O IP do computador remoto é: {{ ip_remoto }}</p>
-        <p>O host da aplicação é: {{ host_app }}</p>
-        <hr>
-    </div>
-
-    <!-- O Formulário -->
-    <form method="POST">
-        {{ form.hidden_tag() }} 
-        
-        <div class="mb-3">
-            {{ form.nome.label(class="form-label fw-bold") }}
-            {{ form.nome(class="form-control") }}
-        </div>
-        <div class="mb-3">
-            {{ form.sobrenome.label(class="form-label fw-bold") }}
-            {{ form.sobrenome(class="form-control") }}
-        </div>
-        <div class="mb-3">
-            {{ form.instituicao.label(class="form-label fw-bold") }}
-            {{ form.instituicao(class="form-control") }}
-        </div>
-        <div class="mb-3">
-            {{ form.disciplina.label(class="form-label fw-bold") }}
-            {{ form.disciplina(class="form-select") }}
-        </div>
-        
-        {{ form.submit(class="btn btn-secondary") }}
-    </form>
-
-    <div class="mt-4">
-        <p>The local date and time is {{ moment(current_time).format('LLL') }}.</p>
-        <p>That was {{ moment(current_time).fromNow() }}.</p>
-    </div>
-
+{% block page_content %}
+<div class="page-header">
+    <h1>Hello, {% if name %}{{ name }}{% else %}Stranger{% endif %}!</h1>
+    {% if not known %}
+    <p>Pleased to meet you!</p>
+    {% else %}
+    <p>Happy to see you again!</p>
+    {% endif %}
+</div>
+{{ wtf.quick_form(form) }}
 {% endblock %}
