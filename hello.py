@@ -3,7 +3,7 @@ from flask import Flask, render_template, session, redirect, url_for
 from flask_bootstrap import Bootstrap
 from flask_moment import Moment
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField
+from wtforms import StringField, SubmitField, SelectField
 from wtforms.validators import DataRequired
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -42,8 +42,10 @@ class User(db.Model):
         return '<User %r>' % self.username
 
 
+# Adicionado o campo 'role' (SelectField) no formulário
 class NameForm(FlaskForm):
     name = StringField('What is your name?', validators=[DataRequired()])
+    role = SelectField('Role?', coerce=int)
     submit = SubmitField('Submit')
 
 
@@ -65,11 +67,14 @@ def internal_server_error(e):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     form = NameForm()
+    # Carrega as opções do dropdown dinamicamente do banco de dados
+    form.role.choices = [(r.id, r.name) for r in Role.query.order_by(Role.name).all()]
+    
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.name.data).first()
         if user is None:
-            # Associa a função 'User' por padrão
-            user_role = Role.query.filter_by(name='User').first()
+            # Associa o usuário ao cargo selecionado no dropdown
+            user_role = Role.query.get(form.role.data)
             user = User(username=form.name.data, role=user_role)
             db.session.add(user)
             db.session.commit()
@@ -79,8 +84,10 @@ def index():
         session['name'] = form.name.data
         return redirect(url_for('index'))
     
-    # Captura todos os usuários para mostrar na tabela
+    # Captura as listas completas para a tabela e para contar a quantidade
     users_list = User.query.all()
+    roles_list = Role.query.all()
     
     return render_template('index.html', form=form, name=session.get('name'),
-                           known=session.get('known', False), users=users_list)
+                           known=session.get('known', False), 
+                           users=users_list, roles=roles_list)
