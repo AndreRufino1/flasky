@@ -1,9 +1,9 @@
 import os
-from flask import Flask, render_template, redirect, url_for, flash, request
+from flask import Flask, render_template, redirect, url_for, flash, request, session
 from flask_bootstrap import Bootstrap
 from flask_moment import Moment
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField
+from wtforms import StringField, SubmitField, BooleanField
 from wtforms.validators import DataRequired
 from flask_sqlalchemy import SQLAlchemy
 from sendgrid import SendGridAPIClient
@@ -42,13 +42,19 @@ class User(db.Model):
 # Formulário
 class NameForm(FlaskForm):
     name = StringField('Qual é o seu nome?', validators=[DataRequired()])
-    submit = SubmitField('Enviar')
+    send_email = BooleanField('Deseja enviar e-mail para flaskaulasweb@zohomail.com?')
+    submit = SubmitField('Submit')
 
 # Função de envio de e-mail via SendGrid
-def enviar_email_cadastro(nome_novo_usuario):
+def enviar_email_cadastro(nome_novo_usuario, enviar_para_professor):
     email_remetente = 'a.papaleo@aluno.ifsp.edu.br'
 
-    emails_destino = ['flaskaulasweb@zohomail.com', 'a.papaleo@aluno.ifsp.edu.br']
+    # O endereço institucional recebe sempre o e-mail
+    emails_destino = ['a.papaleo@aluno.ifsp.edu.br']
+    
+    # Adiciona o endereço do professor apenas se a caixa de seleção for ativada
+    if enviar_para_professor:
+        emails_destino.append('flaskaulasweb@zohomail.com')
 
     conteudo_html = f"""
     <p><strong>Prontuário:</strong> PT3026159</p>
@@ -64,7 +70,6 @@ def enviar_email_cadastro(nome_novo_usuario):
     )
 
     try:
-        # Chave protegida por variável de ambiente para o GitHub não bloquear
         sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
         sg.send(mensagem)
         print("E-mail enviado com sucesso!")
@@ -88,17 +93,21 @@ def index():
             user = User(username=form.name.data)
             db.session.add(user)
             db.session.commit()
-            enviar_email_cadastro(form.name.data)
-            flash('Novo usuário cadastrado com sucesso e e-mail enviado!')
+            
+            # Envia o e-mail passando também a resposta da caixa de seleção
+            enviar_email_cadastro(form.name.data, form.send_email.data)
+            flash('E-mail enviado para o Administrador do sistema, notificando o cadastro de um novo usuário.')
         else:
             flash('Nome de usuário já cadastrado!')
+            
+        session['name'] = form.name.data
         return redirect(url_for('index'))
 
-    # Consulta os usuários e funções cadastrados para exibir nas tabelas
+    # Consulta os utilizadores e funções registados para apresentar nas tabelas
     users = User.query.all()
     roles = Role.query.all()
 
-    return render_template('index.html', form=form, name=None, users=users, roles=roles)
+    return render_template('index.html', form=form, name=session.get('name'), users=users, roles=roles)
 
 if __name__ == '__main__':
     app.run(debug=True)
