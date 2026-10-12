@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}E-mails Enviados{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1>Relação de E-mails Enviados</h1>
+</div>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Destinatário</th>
+            <th>Assunto</th>
+            <th>Data e Hora (UTC)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for email in emails %}
+        <tr>
+            <td>{{ email.recipient }}</td>
+            <td>{{ email.subject }}</td>
+            <td>{{ moment(email.timestamp).format('LLL') }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

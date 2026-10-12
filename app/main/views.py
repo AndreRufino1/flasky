@@ -1,10 +1,10 @@
-from flask import render_template, session, redirect, url_for, current_app
-from .. import db
-from ..models import User
-from ..email import send_email, send_simple_message
+from datetime import datetime
+from flask import render_template, redirect, url_for, session, flash
 from . import main
 from .forms import NameForm
-
+from .. import db
+from ..models import User, Role, Email
+from ..email import enviar_email_cadastro
 
 @main.route('/', methods=['GET', 'POST'])
 def index():
@@ -16,16 +16,34 @@ def index():
             db.session.add(user)
             db.session.commit()
             session['known'] = False
-            print('FLASKY_ADMIN: ' + str(current_app.config['FLASKY_ADMIN']), flush=True)
-            if current_app.config['FLASKY_ADMIN']:
-                #send_email(current_app.config['FLASKY_ADMIN'], 'New User', 'mail/new_user', user=user)
-                print('Enviando mensagem...', flush=True)
-                send_simple_message([current_app.config['FLASKY_ADMIN'], "flaskaulasweb@zohomail.com"], 'Novo usuário', form.name.data)
-                print('Mensagem enviada...', flush=True)
+            
+            # Dispara o e-mail automático para o Zoho e para o seu e-mail institucional
+            try:
+                enviar_email_cadastro(user.username)
+                flash('E-mail enviado com sucesso para o Zoho e e-mail institucional!')
+            except Exception as e:
+                print(f"Erro ao disparar e-mail: {e}")
         else:
             session['known'] = True
+            
         session['name'] = form.name.data
         return redirect(url_for('.index'))
+        
+    users = User.query.all()
+    roles = Role.query.all()
     return render_template('index.html',
-                           form=form, name=session.get('name'),
-                           known=session.get('known', False))
+                           form=form,
+                           name=session.get('name'),
+                           known=session.get('known', False),
+                           users=users,
+                           roles=roles,
+                           current_time=datetime.utcnow())
+
+@main.route('/emailsEnviados')
+def emails_enviados():
+    emails = []
+    try:
+        emails = Email.query.order_by(Email.timestamp.desc()).all()
+    except Exception:
+        pass
+    return render_template('emails_enviados.html', emails=emails)
